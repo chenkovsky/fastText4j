@@ -1,6 +1,7 @@
 package com.mayabot.mynlp.fasttext
 
 import com.carrotsearch.hppc.IntArrayList
+import com.mayabot.mynlp.fasttext.loss.NEGATIVE_TABLE_SIZE
 import java.util.*
 
 
@@ -123,34 +124,5 @@ open class BaseModel(
         this.tree = treeLocal
     }
 
-    companion object {
-        private val tSigmoid: FloatArray = FloatArray(SIGMOID_TABLE_SIZE + 1) { i ->
-            val x = (i * 2 * MAX_SIGMOID).toFloat() / SIGMOID_TABLE_SIZE - MAX_SIGMOID
-            (1.0f / (1.0f + Math.exp((-x).toDouble()))).toFloat()
-        }
 
-        private val tLog: FloatArray = FloatArray(LOG_TABLE_SIZE + 1) { i ->
-            val x = (i.toFloat() + 1e-5f) / LOG_TABLE_SIZE
-            Math.log(x.toDouble()).toFloat()
-        }
-
-        fun log(x: Float): Float {
-            if (x > 1.0f) {
-                return 0.0f
-            }
-            val i = (x * LOG_TABLE_SIZE).toInt()
-            return tLog[i]
-        }
-
-        fun sigmoid(x: Float): Float {
-            return when {
-                x < -MAX_SIGMOID -> 0.0f
-                x > MAX_SIGMOID -> 1.0f
-                else -> {
-                    val i = ((x + MAX_SIGMOID) * SIGMOID_TABLE_SIZE / MAX_SIGMOID.toFloat() / 2f).toInt()
-                    tSigmoid[i]
-                }
-            }
-        }
-    }
 }

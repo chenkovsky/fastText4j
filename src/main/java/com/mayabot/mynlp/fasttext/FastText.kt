@@ -10,7 +10,7 @@ import com.google.common.collect.Sets
 import com.google.common.io.Files
 import com.google.common.primitives.Floats
 import com.mayabot.blas.*
-import com.mayabot.blas.Vector
+import com.mayabot.blas.vector.Vector
 import java.io.File
 import java.io.IOException
 import java.io.InputStream

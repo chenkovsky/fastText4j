@@ -6,14 +6,12 @@ import com.carrotsearch.hppc.IntIntMap
 import com.carrotsearch.hppc.LongArrayList
 import com.google.common.base.CharMatcher
 import com.google.common.base.Splitter
-import java.io.File
 import java.io.IOException
 import java.nio.ByteBuffer
 import java.nio.channels.FileChannel
 import com.mayabot.blas.*
 import java.util.*
-import com.google.common.primitives.UnsignedLong
-
+import kotlin.math.min
 
 
 const val HASH_C = 116049371
@@ -43,6 +41,7 @@ const val EOW = ">"
  *
  * @author jimichan
  */
+@ExperimentalUnsignedTypes
 class Dictionary(private val args: Args) {
 
     var size: Int = 0
@@ -68,6 +67,7 @@ class Dictionary(private val args: Args) {
     val minn = args.minn
     val bucket = args.bucket
     val bucketLong = args.bucket.toLong()
+    val bucketULong = args.bucket.toULong()
     val wordNgrams = args.wordNgrams
     val label = args.label
     val model = args.model
@@ -148,16 +148,7 @@ class Dictionary(private val args: Args) {
         return h
     }
 
-    private fun stringHash(str: String): Long {
-        // 0xffffffc5;
-        var h = 2166136261L.toInt()
-        for (strByte in str.toByteArray()) {
-            // FNV-1a
-            h = (h xor strByte.toInt()) * 16777619
-        }
-
-        return h.toLong() and 0xffffffffL
-    }
+    private fun stringHash(str: String) = Hashs.fnv1aHash(str)
 
     fun getWord(id: Int): String {
         checkArgument(id >= 0)
@@ -218,28 +209,6 @@ class Dictionary(private val args: Args) {
                 System.exit(1)
             }
         }
-
-//
-//        file.useLines { lines ->
-//            lines.filterNot { it.isNullOrBlank() || it.startsWith("#") }
-//                    .forEach { line ->
-//                        splitter.split(line).forEach { token ->
-//                            add(token)
-//                            if (ntokens % 1000000 == 0L && args.verbose > 1) {
-//                                print("\rRead " + ntokens / 1000000 + "M words")
-//                            }
-//
-//                            if (size > mmm) {
-//                                minThreshold++
-//                                threshold(minThreshold, minThreshold)
-//                            }
-//                        }
-//                        add(EOS)
-//                    }
-//
-//
-//        }
-
 
     }
 
@@ -395,59 +364,27 @@ class Dictionary(private val args: Args) {
         return ntokens
     }
 
-    companion object {
-         val coeff = UnsignedLong.valueOf(116049371L)
-         val U64_START = UnsignedLong.valueOf("18446744069414584320")
-    }
+     val coeff:ULong = 116049371u
+
+     val U64_START:ULong = 18446744069414584320u
+
 
     private fun addWordNgrams(line: IntArrayList,
                               hashes: LongArrayList,
                               n: Int) {
-        //read word^ hash 3675003649 int32 -619963647 uint64 18446744073089587969 wid 1
-//        for (i in 0 until hashes.size()) {
-//            var h = hashes.get(i)
-//            var j = i + 1
-//            while (j < hashes.size() && j < i + n) {
-//                h = (h * 116049371) + hashes.get(j)
-//                pushHash(line, (h % bucket).toInt())
-//                j++
-//            }
-//        }
-//        AddWordNgramsHelper.addWordNGrams(line,hashes,n,bucket.toLong(),{x->
-//            pushHash(h)
-//        })
+
         val hashSize = hashes.size()
 
         for (i in 0 until hashSize) {
-            var h = toUnsignedLong64(hashes.get(i))
-            var j = i + 1
-            while (j < hashSize && j < i + n) {
-                //val h2 = hashes.get(j)
-                val h2 = hashes.get(j).toInt().toLong()
+            var h = hashes.get(i).toULong()
 
-                if (h2 >= 0) {
-                    h = h.times(coeff).plus(UnsignedLong.valueOf(h2))
-                } else {
-                    h = h.times(coeff).minus(UnsignedLong.valueOf(-h2))
-                }
-                var id = h.mod(UnsignedLong.valueOf(bucketLong)).toInt()
-
-                pushHash(line ,id)
-                j++
+            for(j in i+1 until min(hashSize,i+n)){
+                h = h * coeff + hashes.get(j).toULong()
+                pushHash(line , (h % bucketULong).toInt())
             }
         }
     }
 
-    // from https://github.com/linkfluence/fastText4j/blob/b018438e84bebd20f89a701c35f022139418930c/src/main/java/fasttext/BaseDictionary.java
-
-
-    private fun toUnsignedLong64(l: Long): UnsignedLong {
-        return if (l > Integer.MAX_VALUE) {
-            U64_START.plus(UnsignedLong.valueOf(l))
-        } else {
-            UnsignedLong.valueOf(l)
-        }
-    }
 
     private fun addSubwords(line: IntArrayList,
                             token: String,
@@ -480,7 +417,10 @@ class Dictionary(private val args: Args) {
         }
 
         val ngrams = IntArrayList()
-        computeSubwords(BOW + word + EOW, ngrams)
+
+        if(word != EOS) {
+            computeSubwords(BOW + word + EOW, ngrams)
+        }
 
         return ngrams
     }
@@ -498,7 +438,9 @@ class Dictionary(private val args: Args) {
             substrings.add(word)
         }
 
-        computeSubwords(BOW + word + EOW, ngrams)
+        if(word != EOS) {
+            computeSubwords(BOW + word + EOW, ngrams)
+        }
     }
 
     fun getLine(tokens: List<String>, words: IntArrayList,

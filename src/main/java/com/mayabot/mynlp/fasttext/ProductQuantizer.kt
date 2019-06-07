@@ -1,10 +1,8 @@
 package com.mayabot.mynlp.fasttext
 
 
-import com.google.common.base.Preconditions
-import com.mayabot.mynlp.fasttext.*
 import com.mayabot.blas.*
-import com.mayabot.blas.Vector
+import com.mayabot.blas.vector.Vector
 import java.io.IOException
 import java.nio.ByteBuffer
 import java.nio.channels.FileChannel
@@ -35,9 +33,9 @@ class QMatrix(val m: Int = 0, val n: Int = 0, val dsub: Int = 2, var qnorm: Bool
         }
     }
 
-    fun quantize(matrix: MutableFloatMatrix) {
-        Preconditions.checkArgument(m == matrix.rows())
-        Preconditions.checkArgument(n == matrix.cols())
+    fun quantize(matrix: FloatMatrix) {
+        check(m == matrix.rows())
+        check(n == matrix.cols())
 
         if (qnorm_) {
             val norms = FloatArray(m)
@@ -55,7 +53,7 @@ class QMatrix(val m: Int = 0, val n: Int = 0, val dsub: Int = 2, var qnorm: Bool
         pq_.compute_codes(matrix, codes_)
     }
 
-    fun addToVector(x: MutableVector, t: Int) {
+    fun addToVector(x: Vector, t: Int) {
         var norm = 1.0f
         if (qnorm_) {
             norm = npq_.centroidTable.centroidData[npq_.get_centroids(0, norm_codes_[t])]
@@ -64,7 +62,7 @@ class QMatrix(val m: Int = 0, val n: Int = 0, val dsub: Int = 2, var qnorm: Bool
     }
 
     fun dotRow(vec: Vector, i: Int): Float {
-        Preconditions.checkArgument(i >= 0 && i < m && vec.length() === n)
+        check(i >= 0 && i < m && vec.length() === n)
 
         var norm = 1f
         if (qnorm_) {
@@ -255,7 +253,7 @@ class ProductQuantizer(val dim: Int, val dsub: Int) {
      * @param t 原始数据的行数
      * @param alpha
      */
-    fun addCode(x: MutableVector, codes_: ShortArray, t: Int, alpha: Float) {
+    fun addCode(x: Vector, codes_: ShortArray, t: Int, alpha: Float) {
         var d = dsub
         val codeOffset = nsubq_ * t
         val centroidData = centroidTable.centroidData
@@ -457,7 +455,7 @@ class CentroidTable(
          * @param offset
          * @return 质心点的下标
          */
-        fun assignCentroid(data: Vector,offset:Int): Short {
+        fun assignCentroid(data: Vector, offset:Int): Short {
             var dis = distL2(data,offset,0)
             var code: Short = 0
             for (j in 1 until ksub) {
@@ -471,7 +469,7 @@ class CentroidTable(
         }
 
 
-        fun distL2(dataRow: Vector,offset: Int, iZ: Int): Float {
+        fun distL2(dataRow: Vector, offset: Int, iZ: Int): Float {
             var dist = 0f
             var j = index(iZ)
             for (i in offset until offset+d) {

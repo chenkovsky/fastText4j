@@ -9,13 +9,10 @@ import com.google.common.io.Files
 import com.google.common.primitives.Ints
 import com.google.common.util.concurrent.AtomicDouble
 import com.mayabot.blas.*
+import com.mayabot.blas.vector.Vector
 import java.io.*
 import java.util.concurrent.atomic.AtomicLong
 
-const val SIGMOID_TABLE_SIZE = 512
-const val MAX_SIGMOID = 8
-const val LOG_TABLE_SIZE = 512
-const val NEGATIVE_TABLE_SIZE = 10000000
 
 
 
@@ -321,15 +318,18 @@ class FastTextTrain {
         val t = ((System.currentTimeMillis() - startTime) / 1000).toDouble()
         val lr = args.lr * (1.0 - progress)
         var wst = 0.0
+        // 按照 0.2 版本修复ETA问题
         var eta = (720 * 3600).toLong() // Default to one month
         if (progress > 0 && t >= 0) {
-            eta = (t / progress * (1 - progress) / args.thread).toInt().toLong()
-            wst = tokenCount.toFloat() / t
+            progress *= 100
+            eta = (t * (100.0f-progress) / progress).toLong()
+            wst = tokenCount.toDouble() / t / args.thread.toDouble()
         }
+
         val etah = eta / 3600
         val etam = eta % 3600 / 60
         val etas = eta % 3600 % 60
-        progress *= 100
+
         val sb = StringBuilder()
         sb.append("Progress: " +
                 String.format("%2.2f", progress) + "% words/sec/thread: " + String.format("%8.0f", wst))
