@@ -1,5 +1,8 @@
 ## FastText4j
-
+   
+   fastText4j原是[Mynlp](https://github.com/mayabot/mynlp)一个子模块，现在独立成为一个开源项目。（mynlp是一个高性能、模块化、可扩展的中文NLP工具包
+）
+   
    Implementing Facebook's FastText with java. [Fasttext](https://github.com/facebookresearch/fastText/) is a library for text representation and classification by facebookresearch. It implements text classification and word embedding learning.
    
    [中文文档](https://github.com/mayabot/fastText4j/wiki/FastText4j%E4%B8%AD%E6%96%87%E6%96%87%E6%A1%A3)
